@@ -13,7 +13,7 @@ let valorFrete = 0;
 let filtroAtual = 'todos';
 let isSignUpMode = false;
 
-// Salva dados iniciais se não existirem
+// Salva dados iniciais no localStorage se ele estiver vazio
 if(!localStorage.getItem('sf_produtos')) {
     localStorage.setItem('sf_produtos', JSON.stringify(produtos));
 }
@@ -27,7 +27,8 @@ function toggleAuthMode() {
 }
 
 function handleAuth(e) {
-    e.preventDefault();
+    e.preventDefault(); // IMPEDE A PÁGINA DE RECARREGAR E PERDER OS DADOS
+    
     const name = document.getElementById('authName').value;
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
@@ -42,12 +43,12 @@ function handleAuth(e) {
         usuarios.push({ name, email, password, role });
         localStorage.setItem('sf_usuarios', JSON.stringify(usuarios));
         alert("Cadastro realizado com sucesso!");
-        toggleAuthMode();
+        toggleAuthMode(); // Volta para o modo de login automaticamente
     } else {
         // Fluxo de Login
         const user = usuarios.find(u => u.email === email && u.password === password && u.role === role);
         
-        // Conta mestre padrão para testes caso não queira cadastrar
+        // Conta mestre de testes para o Admin
         if(email === "admin@admin.com" && password === "123" && role === "admin") {
             showPanel("admin", "Administrador Teste");
             return;
@@ -113,7 +114,7 @@ function renderAdminInventory() {
                     <small>Cat: ${p.categoria.toUpperCase()} | Marca: ${p.marca.toUpperCase()}</small>
                 </div>
                 <div>
-                    <span style="badge; background: ${p.estoque > 0 ? '#10b981' : '#ef4444'}; color:white; padding:4px 8px; border-radius:6px;">
+                    <span style="background: ${p.estoque > 0 ? '#10b981' : '#ef4444'}; color:white; padding:4px 8px; border-radius:6px; font-size:0.8rem; font-weight:bold;">
                         Estoque: ${p.estoque} u.
                     </span>
                 </div>
@@ -126,7 +127,9 @@ function renderAdminInventory() {
 function render() {
     const main = document.getElementById('mainContainer');
     main.innerHTML = '';
-    const marcas = [...new Set(produtos.map(p => p.marca))]; // Pega todas as marcas existentes dinamicamente
+    
+    // Gera as seções de marcas dinamicamente com base nos produtos existentes
+    const marcas = [...new Set(produtos.map(p => p.marca))]; 
 
     marcas.forEach(marca => {
         const section = document.createElement('section');
@@ -150,7 +153,7 @@ function render() {
                     <div class="product-info">
                         <small>${p.marca.toUpperCase()} | ${p.categoria.toUpperCase()}</small>
                         <h3>${p.titulo}</h3>
-                        <div style="font-size:0.8rem; color: var(--secondary)">Tam. Disponíveis: ${p.tamanhos.join(', ')}</div>
+                        <div style="font-size:0.8rem; color: var(--secondary)">Tam: ${p.tamanhos.join(', ')}</div>
                         <div class="product-price">R$ ${p.preco.toFixed(2).replace('.', ',')}</div>
                         <div class="card-buttons">
                             <button class="btn-add" onclick="addToCart(${p.id})" ${foraDeEstoque ? 'disabled style="background:#64748b;"' : ''}>
@@ -164,14 +167,13 @@ function render() {
     updateCartUI();
 }
 
-// --- LOGICA DO CARRINHO COM ATUALIZAÇÕES ---
+// --- LÓGICA DO CARRINHO ---
 function addToCart(id) {
     const prod = produtos.find(p => p.id === id);
-    
-    // Verifica se ainda tem estoque antes de adicionar mais um
     const itemNoCarrinho = carrinho.find(i => i.id === id);
     const qtdAtual = itemNoCarrinho ? itemNoCarrinho.qtd : 0;
 
+    // Impede de colocar no carrinho mais do que o estoque possui
     if (qtdAtual >= prod.estoque) {
         alert("Desculpe, não há mais unidades deste item em estoque!");
         return;
@@ -248,25 +250,23 @@ function updateCartUI() {
     document.getElementById('cartTotal').innerText = `R$ ${totalFinal.toFixed(2).replace('.', ',')}`;
 }
 
-// --- BAIXA DE ESTOQUE (FINALIZAR COMPRA) ---
+// --- BAIXA DE ESTOQUE AO FINALIZAR COMPRA ---
 function checkout() {
-    // Diminui o estoque dos produtos originais de acordo com as vendas
     carrinho.forEach(itemCarrinho => {
         const produtoOriginal = produtos.find(p => p.id === itemCarrinho.id);
         if (produtoOriginal) {
-            produtoOriginal.estoque -= itemCarrinho.qtd;
+            produtoOriginal.estoque -= itemCarrinho.qtd; // Tira do estoque a quantidade vendida
         }
     });
 
-    // Salva o novo estoque modificado no LocalStorage
     localStorage.setItem('sf_produtos', JSON.stringify(produtos));
     
-    // Limpa o carrinho
+    // Limpa o carrinho após a venda bem-sucedida
     carrinho = [];
     localStorage.setItem('sf_cart_v3', JSON.stringify(carrinho));
     
     toggleCart();
-    render(); // Recarrega a vitrine com o novo estoque atualizado
+    render(); 
     alert("Compra realizada com sucesso! O estoque foi atualizado. 🚀");
 }
 
