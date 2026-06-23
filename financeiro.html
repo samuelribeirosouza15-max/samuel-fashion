@@ -7,6 +7,7 @@
 </head>
 <body>
 <script>
+    // Proteção da página: só deixa entrar quem for o Admin
     const user = JSON.parse(localStorage.getItem('sf_user'));
     if (!user || user.email !== "admin@samuel.com") { window.location.href = 'index.html'; }
 </script>
@@ -20,24 +21,29 @@
 </header>
 
 <div class="container">
-    <div class="card" style="margin-bottom: 20px; background: #10b981; color: white;">
-        <h1 id="totalVendido">R$ 0,00</h1>
-        <p>Lucro Bruto Real do SQLite</p>
+    <div class="card" style="margin-bottom: 20px; background: #10b981; color: white; padding: 25px;">
+        <h1 id="totalVendido" style="font-size: 2.5rem; margin-bottom: 5px;">R$ 0,00</h1>
+        <p style="font-weight: bold; opacity: 0.9;">Lucro Bruto Real (Extraído do SQLite)</p>
     </div>
 
-    <div class="card">
-        <h3>Histórico de Faturamento</h3>
+    <div class="card" style="padding: 20px;">
+        <h3 style="margin-bottom: 15px;">Histórico de Faturamento</h3>
         <table>
             <thead>
                 <tr>
-                    <th>Data/Hora</th>
-                    <th>Produto</th>
+                    <th>Data / Hora</th>
+                    <th>Produto Vendido</th>
+                    <th>Tamanho</th>
                     <th>Valor</th>
                 </tr>
             </thead>
-            <tbody id="vendasLista"></tbody>
+            <tbody id="vendasLista">
+                </tbody>
         </table>
-        <button class="btn" onclick="limparVendas()" style="margin-top:20px; background:#ef4444; color:white; width:auto">Zerar Vendas</button>
+        
+        <button class="btn" onclick="limparVendas()" style="margin-top: 25px; background: #ef4444; color: white; width: auto; padding: 10px 20px;">
+            Zerar Histórico de Vendas
+        </button>
     </div>
 </div>
 
@@ -45,33 +51,51 @@
     const API = "http://localhost:3000";
 
     async function carregarFinanceiro() {
-        const res = await fetch(`${API}/vendas`);
-        const vendas = await res.json();
+        try {
+            const res = await fetch(`${API}/vendas`);
+            const vendas = await res.json();
+            
+            let somaTotal = 0;
+            const tabela = document.getElementById('vendasLista');
+
+            if (vendas.length === 0) {
+                tabela.innerHTML = "<tr><td colspan='4' style='text-align:center; color: #64748b; padding: 30px;'>Nenhuma venda registrada no SQLite ainda.</td></tr>";
+                document.getElementById('totalVendido').innerText = "R$ 0,00";
+                return;
+            }
+
+            // Monta as linhas da tabela com os dados reais do banco
+            tabela.innerHTML = vendas.map(v => {
+                somaTotal += v.preco;
+                // Se por acaso a venda antiga não tiver tamanho gravado, ele mostra 'Padrão'
+                const tamanhoInfo = v.tamanho ? v.tamanho : 'Padrão';
+                
+                return `
+                    <tr>
+                        <td>${v.data}</td>
+                        <td style="font-weight: 600;">${v.titulo}</td>
+                        <td><span style="background: #e2e8f0; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold;">${tamanhoInfo}</span></td>
+                        <td style="color: #10b981; font-weight: bold;">R$ ${v.preco.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Atualiza o card verde lá de cima com a soma formatada em Moeda Real (R$)
+            document.getElementById('totalVendido').innerText = `R$ ${somaTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         
-        let somaTotal = 0;
-        const tabela = document.getElementById('vendasLista');
-
-        if(vendas.length === 0) {
-            tabela.innerHTML = "<tr><td colspan='3' style='text-align:center'>Nenhuma venda registrada no SQLite ainda.</td></tr>";
-            document.getElementById('totalVendido').innerText = "R$ 0,00";
-            return;
+        } catch (err) {
+            document.getElementById('vendasLista').innerHTML = "<tr><td colspan='4' style='text-align:center; color: red;'>Erro ao puxar dados do servidor. O arquivo server.js está ligado?</td></tr>";
         }
-
-        tabela.innerHTML = vendas.map(v => {
-            somaTotal += v.preco;
-            return `<tr><td>${v.data}</td><td>${v.titulo}</td><td>R$ ${v.preco.toFixed(2)}</td></tr>`;
-        }).join('');
-
-        document.getElementById('totalVendido').innerText = `R$ ${somaTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     }
 
     async function limparVendas() {
-        if(confirm("Limpar dados de vendas do SQLite?")) {
+        if (confirm("🚨 Atenção: Deseja realmente apagar TODO o histórico de faturamento do banco SQLite? Esta ação não pode ser desfeita.")) {
             await fetch(`${API}/vendas/reset`, { method: 'POST' });
-            carregarFinanceiro();
+            carregarFinanceiro(); // Atualiza a tela que agora vai ficar zerada
         }
     }
 
+    // Executa a função automaticamente assim que o admin abre a página
     carregarFinanceiro();
 </script>
 </body>
