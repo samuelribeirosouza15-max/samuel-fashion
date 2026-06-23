@@ -24,6 +24,16 @@
             <input type="number" id="p" placeholder="Preço (R$)">
             <input type="number" id="q" placeholder="Quantidade">
             <input type="text" id="img" placeholder="URL da Imagem">
+            
+            <select id="cat" style="padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-weight:bold;">
+                <option value="Calça">Calça</option>
+                <option value="Camisa">Camisa</option>
+                <option value="Blusa de Time">Blusa de Time</option>
+                <option value="Blusa de Frio">Blusa de Frio</option>
+                <option value="Tênis">Tênis</option>
+                <option value="Roupas Infantil">Roupas Infantil</option>
+            </select>
+
             <button class="btn btn-buy" onclick="add()" style="width:auto; margin:0;">Salvar no Banco</button>
             <button class="btn" onclick="limparTudo()" style="width:auto; background:#ef4444; color:white; margin:0;">Zerar Banco</button>
         </div>
@@ -34,6 +44,7 @@
             <tr>
                 <th>ID</th>
                 <th>Produto</th>
+                <th>Categoria</th>
                 <th>Preço</th>
                 <th>Estoque</th>
                 <th>Ações</th>
@@ -54,6 +65,7 @@
             <tr>
                 <td>#${p.id}</td>
                 <td>${p.titulo}</td>
+                <td><span style="background:#f1f5f9; padding:3px 8px; border-radius:10px; font-size:0.8rem;">${p.categoria}</span></td>
                 <td>R$ ${p.preco.toFixed(2)}</td>
                 <td style="font-weight:bold; color:${p.qtd < 3 ? 'red' : 'green'}">${p.qtd}</td>
                 <td><button onclick="remover(${p.id})" style="color:red; background:none; border:none; cursor:pointer">Excluir</button></td>
@@ -65,14 +77,15 @@
         const titulo = document.getElementById('t').value;
         const preco = parseFloat(document.getElementById('p').value);
         const qtd = parseInt(document.getElementById('q').value);
-        const img = document.getElementById('img').value || 'https://via.placeholder.com/250';
+        const img = document.getElementById('img').value || '';
+        const categoria = document.getElementById('cat').value;
 
         if(!titulo || !preco || !qtd) return alert("Preencha todos os campos!");
 
         await fetch(`${API}/produtos`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ titulo, preco, qtd, img })
+            body: JSON.stringify({ titulo, preco, qtd, img, categoria })
         });
 
         document.getElementById('t').value = ''; document.getElementById('p').value = ''; document.getElementById('q').value = '';
