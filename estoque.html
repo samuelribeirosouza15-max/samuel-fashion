@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Samuel Fashion | Estoque</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<script>
+    const user = JSON.parse(localStorage.getItem('sf_user'));
+    if (!user || user.email !== "admin@samuel.com") { window.location.href = 'index.html'; }
+</script>
+
+<header>
+    <div class="logo">PAINEL ADMIN - ESTOQUE</div>
+    <nav><a href="index.html">VOLTAR À LOJA</a></nav>
+</header>
+
+<div class="container">
+    <div class="card" style="margin-bottom: 20px;">
+        <h3>Cadastrar Produto no SQLite</h3>
+        <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap">
+            <input type="text" id="t" placeholder="Nome do Produto">
+            <input type="number" id="p" placeholder="Preço (R$)">
+            <input type="number" id="q" placeholder="Quantidade">
+            <input type="text" id="img" placeholder="URL da Imagem">
+            <button class="btn btn-buy" onclick="add()" style="width:auto; margin:0;">Salvar no Banco</button>
+            <button class="btn" onclick="limparTudo()" style="width:auto; background:#ef4444; color:white; margin:0;">Zerar Banco</button>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Produto</th>
+                <th>Preço</th>
+                <th>Estoque</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="lista"></tbody>
+    </table>
+</div>
+
+<script>
+    const API = "http://localhost:3000";
+
+    async function render() {
+        const res = await fetch(`${API}/produtos`);
+        const produtos = await res.json();
+        
+        document.getElementById('lista').innerHTML = produtos.map(p => `
+            <tr>
+                <td>#${p.id}</td>
+                <td>${p.titulo}</td>
+                <td>R$ ${p.preco.toFixed(2)}</td>
+                <td style="font-weight:bold; color:${p.qtd < 3 ? 'red' : 'green'}">${p.qtd}</td>
+                <td><button onclick="remover(${p.id})" style="color:red; background:none; border:none; cursor:pointer">Excluir</button></td>
+            </tr>
+        `).join('');
+    }
+
+    async function add() {
+        const titulo = document.getElementById('t').value;
+        const preco = parseFloat(document.getElementById('p').value);
+        const qtd = parseInt(document.getElementById('q').value);
+        const img = document.getElementById('img').value || 'https://via.placeholder.com/250';
+
+        if(!titulo || !preco || !qtd) return alert("Preencha todos os campos!");
+
+        await fetch(`${API}/produtos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ titulo, preco, qtd, img })
+        });
+
+        document.getElementById('t').value = ''; document.getElementById('p').value = ''; document.getElementById('q').value = '';
+        render();
+    }
+
+    async function remover(id) {
+        if(confirm("Deseja apagar do banco de dados?")) {
+            await fetch(`${API}/produtos/${id}`, { method: 'DELETE' });
+            render();
+        }
+    }
+
+    async function limparTudo() {
+        if(confirm("Apagar todos os produtos do SQLite?")) {
+            await fetch(`${API}/produtos/reset`, { method: 'POST' });
+            render();
+        }
+    }
+    render();
+</script>
+</body>
+</html>
