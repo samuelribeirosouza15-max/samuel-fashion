@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Samuel Fashion | Login</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body style="display:flex; align-items:center; justify-content:center; height:100vh; background:#f0f2f5;">
+<div class="card" style="width:100%; max-width:400px; padding:30px;">
+    <h2 style="text-align:center; margin-bottom:20px;">Acessar Conta</h2>
+    <div style="display:flex; flex-direction:column; gap:15px;">
+        <input type="text" id="lName" placeholder="Seu Nome">
+        <input type="email" id="lEmail" placeholder="seu@email.com">
+        <button class="btn btn-buy" onclick="entrar()">Entrar no Sistema</button>
+        <div style="background:#eef2ff; padding:10px; border-radius:8px; font-size:0.8rem; color:#4338ca;">
+            Administrador use o e-mail: <b>admin@samuel.com</b>
+        </div>
+    </div>
+</div>
+<script>
+    function entrar() {
+        const nome = document.getElementById('lName').value.trim();
+        const email = document.getElementById('lEmail').value.trim().toLowerCase();
+        if(!nome || !email) return alert("Preencha todos os campos.");
+        
+        localStorage.clear(); // Limpa lixos antigos de login
+        localStorage.setItem('sf_user', JSON.stringify({ name: nome, email: email }));
+        window.location.href = 'index.html';
+    }
+</script>
+</body>
+</html>
