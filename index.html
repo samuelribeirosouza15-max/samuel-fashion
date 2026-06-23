@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Samuel Fashion | Loja</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header>
+    <div class="logo">SAMUEL FASHION</div>
+    <nav id="menu"><a href="index.html">LOJA</a></nav>
+    <div><button class="btn" style="width:auto; padding:5px 15px; margin:0;" onclick="logout()">Sair</button></div>
+</header>
+
+<div class="container">
+    <h2 id="welcome">Carregando...</h2>
+    <div class="product-grid" id="grid"></div>
+</div>
+
+<script>
+    const API = "http://localhost:3000";
+
+    function checkAuth() {
+        const user = JSON.parse(localStorage.getItem('sf_user'));
+        if (!user) { window.location.href = 'login.html'; return; }
+        
+        document.getElementById('welcome').innerText = `Olá, ${user.name}!`;
+        if (user.email === "admin@samuel.com") {
+            document.getElementById('menu').innerHTML = `
+                <a href="index.html">LOJA</a>
+                <a href="estoque.html" style="color:#10b981; font-weight:bold;">📦 ESTOQUE</a>
+                <a href="financeiro.html" style="color:#10b981; font-weight:bold;">💰 FINANCEIRO</a>`;
+        }
+    }
+
+    async function render() {
+        try {
+            const resposta = await fetch(`${API}/produtos`);
+            const produtos = await resposta.json();
+            const grid = document.getElementById('grid');
+            
+            if(produtos.length === 0) {
+                grid.innerHTML = "<h3>Nenhum produto cadastrado no banco SQLite. Vá em Estoque para cadastrar.</h3>";
+                return;
+            }
+
+            grid.innerHTML = produtos.map(p => `
+                <div class="card">
+                    <img src="${p.img}" onerror="this.src='https://via.placeholder.com/250'">
+                    <h3 style="margin-top:10px">${p.titulo}</h3>
+                    <p style="color:var(--accent); font-weight:800; margin: 5px 0;">R$ ${p.preco.toFixed(2)}</p>
+                    <p><small>Estoque: ${p.qtd}</small></p>
+                    <button class="btn btn-buy" ${p.qtd <= 0 ? 'disabled' : ''} onclick="comprar(${p.id}, '${p.titulo}', ${p.preco})">
+                        ${p.qtd > 0 ? 'Comprar' : 'Esgotado'}
+                    </button>
+                </div>
+            `).join('');
+        } catch (err) {
+            document.getElementById('grid').innerHTML = "<h3>Erro ao conectar com o servidor SQLite. O arquivo server.js está rodando no terminal?</h3>";
+        }
+    }
+
+    async function comprar(id, titulo, preco) {
+        const res = await fetch(`${API}/vender`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, titulo, preco })
+        });
+        
+        if(res.ok) {
+            alert("Compra realizada com sucesso!");
+            render();
+        } else {
+            alert("Erro ao processar compra.");
+        }
+    }
+
+    function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+    
+    checkAuth();
+    render();
+</script>
+</body>
+</html>
