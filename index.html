@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <title>Samuel Fashion | Loja</title>
     <link rel="stylesheet" href="../style.css">
+    <style>
+        .filter-bar { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
+        .btn-filter { background: #e2e8f0; color: #0f172a; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; }
+        .btn-filter:hover, .btn-filter.active { background: #000000; color: #ffffff; }
+        .size-select { width: 100%; padding: 8px; margin: 10px 0; border-radius: 6px; border: 1px solid var(--border); background: #f8fafc; font-weight: bold; }
+    </style>
 </head>
 <body>
 <header>
@@ -14,16 +20,27 @@
 
 <div class="container">
     <h2 id="welcome">Carregando...</h2>
+    
+    <div class="filter-bar">
+        <button class="btn-filter active" onclick="filtrarProdutos('todos', this)">Todos</button>
+        <button class="btn-filter" onclick="filtrarProdutos('Calça', this)">Calças</button>
+        <button class="btn-filter" onclick="filtrarProdutos('Camisa', this)">Camisas</button>
+        <button class="btn-filter" onclick="filtrarProdutos('Blusa de Time', this)">Blusas de Time</button>
+        <button class="btn-filter" onclick="filtrarProdutos('Blusa de Frio', this)">Blusas de Frio</button>
+        <button class="btn-filter" onclick="filtrarProdutos('Tênis', this)">Tênis</button>
+        <button class="btn-filter" onclick="filtrarProdutos('Roupas Infantil', this)">Infantil</button>
+    </div>
+
     <div class="product-grid" id="grid"></div>
 </div>
 
 <script>
     const API = "http://localhost:3000";
+    let todosOsProdutos = [];
 
     function checkAuth() {
         const user = JSON.parse(localStorage.getItem('sf_user'));
         if (!user) { window.location.href = 'login.html'; return; }
-        
         document.getElementById('welcome').innerText = `Olá, ${user.name}!`;
         if (user.email === "admin@samuel.com") {
             document.getElementById('menu').innerHTML = `
@@ -33,52 +50,73 @@
         }
     }
 
-    async function render() {
+    async function buscarProdutos() {
         try {
             const resposta = await fetch(`${API}/produtos`);
-            const produtos = await resposta.json();
-            const grid = document.getElementById('grid');
-            
-            if(produtos.length === 0) {
-                grid.innerHTML = "<h3>Nenhum produto cadastrado no banco SQLite. Vá em Estoque para cadastrar.</h3>";
-                return;
-            }
+            todosOsProdutos = await resposta.json();
+            mostrarNaTela(todosOsProdutos);
+        } catch (err) {
+            document.getElementById('grid').innerHTML = "<h3>Erro ao conectar com o servidor SQLite.</h3>";
+        }
+    }
 
-            grid.innerHTML = produtos.map(p => `
+    function mostrarNaTela(lista) {
+        const grid = document.getElementById('grid');
+        if(lista.length === 0) {
+            grid.innerHTML = "<h3>Nenhum produto encontrado nesta categoria.</h3>";
+            return;
+        }
+
+        grid.innerHTML = lista.map(p => {
+            // Cria opções diferentes se o produto for Tênis (números) ou Roupa (P, M, G...)
+            const opcoesTamanho = p.categoria === 'Tênis' 
+                ? `<option value="38">Tam: 38</option><option value="39">Tam: 39</option><option value="40">Tam: 40</option><option value="41">Tam: 41</option><option value="42">Tam: 42</option>`
+                : p.categoria === 'Roupas Infantil'
+                ? `<option value="2 Anos">2 Anos</option><option value="4 Anos">4 Anos</option><option value="6 Anos">6 Anos</option><option value="8 Anos">8 Anos</option>`
+                : `<option value="P">Tamanho: P</option><option value="M">Tamanho: M</option><option value="G">Tamanho: G</option><option value="GG">Tamanho: GG</option>`;
+
+            return `
                 <div class="card">
                     <img src="${p.img}" onerror="this.src='https://via.placeholder.com/250'">
                     <h3 style="margin-top:10px">${p.titulo}</h3>
+                    <span style="background:#f1f5f9; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:bold; color:#64748b;">${p.categoria}</span>
                     <p style="color:var(--accent); font-weight:800; margin: 5px 0;">R$ ${p.preco.toFixed(2)}</p>
                     <p><small>Estoque: ${p.qtd}</small></p>
+                    
+                    <select id="size-${p.id}" class="size-select">
+                        ${opcoesTamanho}
+                    </select>
+
                     <button class="btn btn-buy" ${p.qtd <= 0 ? 'disabled' : ''} onclick="comprar(${p.id}, '${p.titulo}', ${p.preco})">
                         ${p.qtd > 0 ? 'Comprar' : 'Esgotado'}
                     </button>
                 </div>
-            `).join('');
-        } catch (err) {
-            document.getElementById('grid').innerHTML = "<h3>Erro ao conectar com o servidor SQLite. O arquivo server.js está rodando no terminal?</h3>";
-        }
+            `;
+        }).join('');
+    }
+
+    function filtrarProdutos(categoria, botao) {
+        document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+        botao.classList.add('active');
+        if(categoria === 'todos') { mostrarNaTela(todosOsProdutos); } 
+        else { mostrarNaTela(todosOsProdutos.filter(p => p.categoria === categoria)); }
     }
 
     async function comprar(id, titulo, preco) {
+        // Pega o tamanho selecionado da caixinha daquele produto específico
+        const tamanhoEscolhido = document.getElementById(`size-${id}`).value;
+
         const res = await fetch(`${API}/vender`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, titulo, preco })
+            body: JSON.stringify({ id, titulo, preco, tamanho: tamanhoEscolhido })
         });
-        
-        if(res.ok) {
-            alert("Compra realizada com sucesso!");
-            render();
-        } else {
-            alert("Erro ao processar compra.");
-        }
+        if(res.ok) { alert(`Compra realizada! Tamanho selecionado: ${tamanhoEscolhido}`); buscarProdutos(); }
     }
 
     function logout() { localStorage.clear(); window.location.href = 'login.html'; }
-    
     checkAuth();
-    render();
+    buscarProdutos();
 </script>
 </body>
 </html>
