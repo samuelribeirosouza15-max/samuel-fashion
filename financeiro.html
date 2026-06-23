@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Samuel Fashion | Financeiro</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<script>
+    const user = JSON.parse(localStorage.getItem('sf_user'));
+    if (!user || user.email !== "admin@samuel.com") { window.location.href = 'index.html'; }
+</script>
+
+<header>
+    <div class="logo">PAINEL ADMIN - FINANCEIRO</div>
+    <nav>
+        <a href="index.html">LOJA</a>
+        <a href="estoque.html">ESTOQUE</a>
+    </nav>
+</header>
+
+<div class="container">
+    <div class="card" style="margin-bottom: 20px; background: #10b981; color: white;">
+        <h1 id="totalVendido">R$ 0,00</h1>
+        <p>Lucro Bruto Real do SQLite</p>
+    </div>
+
+    <div class="card">
+        <h3>Histórico de Faturamento</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Produto</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody id="vendasLista"></tbody>
+        </table>
+        <button class="btn" onclick="limparVendas()" style="margin-top:20px; background:#ef4444; color:white; width:auto">Zerar Vendas</button>
+    </div>
+</div>
+
+<script>
+    const API = "http://localhost:3000";
+
+    async function carregarFinanceiro() {
+        const res = await fetch(`${API}/vendas`);
+        const vendas = await res.json();
+        
+        let somaTotal = 0;
+        const tabela = document.getElementById('vendasLista');
+
+        if(vendas.length === 0) {
+            tabela.innerHTML = "<tr><td colspan='3' style='text-align:center'>Nenhuma venda registrada no SQLite ainda.</td></tr>";
+            document.getElementById('totalVendido').innerText = "R$ 0,00";
+            return;
+        }
+
+        tabela.innerHTML = vendas.map(v => {
+            somaTotal += v.preco;
+            return `<tr><td>${v.data}</td><td>${v.titulo}</td><td>R$ ${v.preco.toFixed(2)}</td></tr>`;
+        }).join('');
+
+        document.getElementById('totalVendido').innerText = `R$ ${somaTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    }
+
+    async function limparVendas() {
+        if(confirm("Limpar dados de vendas do SQLite?")) {
+            await fetch(`${API}/vendas/reset`, { method: 'POST' });
+            carregarFinanceiro();
+        }
+    }
+
+    carregarFinanceiro();
+</script>
+</body>
+</html>
